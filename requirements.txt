@@ -1,0 +1,17 @@
+# requirements.txt
+# ---------------------
+# This file lists the packages required to run launch_optimization.py with
+# sample inputs.
+
+GDAL
+re
+pandas
+numpy
+scipy
+statsmodels
+cvxpy
+cvxopt
+fitters
+reporting
+memory_profiler
+pygeoprocessing

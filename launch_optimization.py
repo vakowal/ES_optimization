@@ -1,5 +1,6 @@
 """Integer optimization of livestock and water services."""
 import os
+import sys
 import shutil
 
 from osgeo import gdal
@@ -36,10 +37,10 @@ def integer_optim_Peru(objective_list, suf):
         'cow_high', 'cow_high_rot', 'cow_low', 'cow_lot_rot',
         'sheep_high', 'sheep_high_rot', 'sheep_low', 'sheep_low_rot']
     pdict = {
-        u'outerdir': u"C:/Users/Ginger/Dropbox/NatCap_backup/CGIAR/Peru/InVEST_optimization_results/11.23.16/animal_weights_survey_default_beta",
-        u'rau_shp': u"C:/Users/Ginger/Documents/NatCap/GIS_local/CGIAR/Peru/boundaries/canete_basin.shp",
-        u'lulc': u"C:/Users/Ginger/Documents/NatCap/GIS_local/CGIAR/Peru/Land_Use/Final_cobertura_Canete.tif",
-        }
+        u'outerdir': os.path.join(
+            _DATA_INPUT_DIR, 'animal_weights_literature_default_beta'),
+        u'rau_shp': os.path.join(_DATA_INPUT_DIR, 'canete_basin.shp'),
+        u'lulc': os.path.join(_DATA_INPUT_DIR, 'Final_cobertura_Canete.tif')}
     intermediate_dir = os.path.join(pdict[u'outerdir'], 'intermediate')
     if not os.path.exists(intermediate_dir):
         os.makedirs(intermediate_dir)
@@ -50,8 +51,8 @@ def integer_optim_Peru(objective_list, suf):
         os.makedirs(output_dir)
     pdict[u'output'] = output_dir
     rau = 0
-    csv_folder = os.path.join(pdict['outerdir'], "marginal_value_csvs")
-    tables_folder = "integer_optimizer_data"
+    csv_folder = os.path.join(pdict['outerdir'], 'marginal_value_csvs')
+    tables_folder = 'integer_optimizer_data'
 
     def generate_ll_input_data():
         tables_list = mv.margv_tables_from_csv(
@@ -151,9 +152,9 @@ def translate_soln_to_lulc(solution_table, out_name):
         None
 
     """
-    hru_lulc_table = r"C:\Users\Ginger\Dropbox\NatCap_backup\CGIAR\Peru\hru_definition_table.csv"
-    HRU_raster = r"C:\Users\Ginger\Documents\NatCap\GIS_local\CGIAR\Peru\Other_spatial_data\HRU_all.tif"
-    HRU_codes = r"C:\Users\Ginger\Documents\NatCap\GIS_local\CGIAR\Peru\summarized_by_zone\HRU_codes_11.8.16.csv"
+    hru_lulc_table = os.path.join(_DATA_INPUT_DIR, 'hru_definition_table.csv')
+    HRU_raster = os.path.join(_DATA_INPUT_DIR, 'HRU_all.tif')
+    HRU_codes = os.path.join(_DATA_INPUT_DIR, 'HRU_codes_11.8.16.csv')
 
     sol_df = pandas.read_csv(solution_table)
     HRU_df = pandas.read_csv(HRU_codes)
@@ -165,7 +166,7 @@ def translate_soln_to_lulc(solution_table, out_name):
     out_nodata = band.GetNoDataValue()
 
     lulc_df = pandas.read_csv(hru_lulc_table)
-    merged_df = pandas.merge(sol_joined, lulc_df, on="HRU", how="outer")
+    merged_df = pandas.merge(sol_joined, lulc_df, on='HRU', how='outer')
     merged_df['soln_int'] = merged_df['solution'].astype(float)
     merged_df['sb_lu'] = merged_df['sb_lu'].astype(float)
     merged_df.loc[
@@ -260,13 +261,21 @@ def integer_optim_wrapper():
                 objective_list = [sed_obj, swy_obj, livestock_obj]
                 suf = 'livestock_{}_sdr_{}_swy_{}'.format(
                     livestock_obj.weight, sed_obj.weight, swy_obj.weight)
-                raster_out_uri = r"C:\Users\Ginger\Dropbox\NatCap_backup\CGIAR\Peru\InVEST_optimization_results\11.23.16\animal_weights_survey_default_beta\output\solution_map%s.tif" % suf
+                raster_out_uri = os.path.join(
+                    _DATA_INPUT_DIR, 'animal_weights_literature_default_beta',
+                    'output', 'solution_map{}'.format(suf))
                 if not os.path.exists(raster_out_uri):
                     solution_csv = integer_optim_Peru(objective_list, suf)
-                    HRU_codes = r"C:\Users\Ginger\Documents\NatCap\GIS_local\CGIAR\Peru\summarized_by_zone\HRU_codes_11.8.16.csv"
-                    HRU_raster = r"C:\Users\Ginger\Documents\NatCap\GIS_local\CGIAR\Peru\Other_spatial_data\HRU_priority_FESC_RYEG.tif"
-                    translate_solution(solution_csv, HRU_codes, HRU_raster, raster_out_uri)
-                    lulc_out_name = r"C:\Users\Ginger\Dropbox\NatCap_backup\CGIAR\Peru\InVEST_optimization_results\11.23.16\animal_weights_survey_default_beta\output\solution_lulc%s.tif" % suf
+                    HRU_codes = os.path.join(
+                        _DATA_INPUT_DIR, 'HRU_codes_11.8.16.csv')
+                    HRU_raster = os.path.join(
+                        _DATA_INPUT_DIR, 'HRU_priority_FESC_RYEG.tif')
+                    translate_solution(
+                        solution_csv, HRU_codes, HRU_raster, raster_out_uri)
+                    lulc_out_name = os.path.join(
+                        _DATA_INPUT_DIR,
+                        'animal_weights_literature_default_beta',
+                        'output', 'solution_lulc{}.tif'.format(suf))
                     translate_soln_to_lulc(solution_csv, lulc_out_name)
 
 
@@ -442,22 +451,25 @@ def create_agreement_rasters(agreement_summary, HRU_raster, raster_out_dir):
 
 
 if __name__ == "__main__":
+    # path to folder containing all data inputs, available as zipped folder
+    # from github repo
+    _DATA_INPUT_DIR = sys.argv[1]
+
     # Calculate optimal intervention portfolios at range of objective weights
     integer_optim_wrapper()
-    folder = 'animal_weights_survey_default_beta'
     output_folder = os.path.join(
-        r"C:\Users\Ginger\Dropbox\NatCap_backup\CGIAR\Peru\InVEST_optimization_results\11.23.16",
-        folder, "output")
+        _DATA_INPUT_DIR, 'animal_weights_literature_default_beta', 'output')
     save_as = os.path.join(
-        output_folder, "{}_scores_summary.csv".format(folder))
+        output_folder, '{}_scores_summary.csv'.format(folder))
     collate_scores(output_folder, save_as)
     objective_list = ['livestock', 'sdr', 'swy']
     collate_solutions(output_folder, objective_list)
-    solution_summary = os.path.join(output_folder, "solution_summary.csv")
+    solution_summary = os.path.join(output_folder, 'solution_summary.csv')
 
     # Summarize portfolio agreement among objective weight combinations
-    agreement_summary = os.path.join(output_folder, 'solution_agreement_summary.csv')
+    agreement_summary = os.path.join(
+        output_folder, 'solution_agreement_summary.csv')
     solution_agreement(HRU_codes, solution_summary, agreement_summary)
-    HRU_raster = r"C:\Users\Ginger\Documents\NatCap\GIS_local\CGIAR\Peru\Other_spatial_data\HRU_priority_FESC_RYEG.tif"
+    HRU_raster = os.path.join(_DATA_INPUT_DIR, 'HRU_priority_FESC_RYEG.tif')
     raster_out_dir = os.path.join(output_folder, 'agreement_rasters')
     create_agreement_rasters(agreement_summary, HRU_raster, raster_out_dir)
